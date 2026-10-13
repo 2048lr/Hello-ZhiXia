@@ -42,14 +42,33 @@ cd Hello-ZhiXia
 
 **技术栈**
 
-| 层 | 选型 |
-| --- | --- |
-| Agent 内核 | [pi](https://pi.dev)（MIT 许可）：`pi-agent-core` · `pi-ai` · `pi-durable` |
-| 实时会话流 | `@earendil-works/chord` |
-| 数据同步 | 操作日志（op log）+ CRDT（Yjs / Automerge） |
-| 桌面壳 | Electron（Windows / Linux） |
-| 移动端 | Android 瘦客户端——持有完整数据副本，不执行 agent |
-| 运行时 | Node.js ≥ 22.19 · TypeScript |
+判断某个依赖是否**真的存在**，请以各 `package.json` 为准。下表把「已经落到依赖里」
+与「只是决策、尚未引入」分开标注 —— 否则照表 `import` 会直接失败。
+
+| 层 | 选型 | 状态 |
+| --- | --- | --- |
+| Agent 内核 | [pi](https://pi.dev)（MIT 许可）：`pi-agent-core` · `pi-ai` · `pi-durable` | 规划中 |
+| 实时会话流 | `@earendil-works/chord` | 规划中 |
+| 数据同步 | 操作日志（op log）+ HLC；冲突合并（Yjs / Automerge 或自研） | op log / HLC 已实现，合并语义规划中 |
+| 桌面壳 | Electron（Windows / Linux） | 规划中 |
+| 移动端 | Android 瘦客户端——持有完整数据副本，不执行 agent | 规划中 |
+| 语言与包管理 | TypeScript 7 · pnpm 12 workspace | ✅ 已引入 |
+| 测试 | Vitest 5 | ✅ 已引入 |
+
+**Node 版本**
+
+仓库里有三个 Node 版本数字，含义不同，不要混用：
+
+| 出处 | 值 | 含义 |
+| --- | --- | --- |
+| `package.json` → `engines.node` | `>=22.19.0` | **最低支持版本**：发布物承诺能跑的下限 |
+| `.nvmrc` | `26.7.0` | **开发版本**：贡献者 `nvm use` 用的 |
+| `devDependencies` → `@types/node` | `^26.6.5` | 跟随**开发版本**，不是下限 |
+
+> ⚠️ `@types/node` 跟的是开发版本，因此**它不能用来判断某个 API 在 22.19 上是否可用**。
+> 一旦用到 Node 内置 API，请以 `engines.node` 为准自行确认。当前 `@hzx/core-sync`
+> 刻意不依赖任何 Node 内置模块（`globalThis.crypto` 也是按结构化类型取的），
+> 所以还没有实际暴露在这个风险下。
 
 ### 开发
 
