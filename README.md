@@ -20,6 +20,7 @@ Hello-ZhiXia/
 ├── package.json           # pnpm workspace 根
 ├── pnpm-workspace.yaml
 ├── tsconfig.base.json     # 三端共享的 TS 配置
+├── docs/                  # 决策记录：ADR / data-model / open-questions
 ├── packages/
 │   ├── core-sync/         # 数据层契约：ULID / HLC / 操作日志 / 墓碑 / schema 版本化
 │   ├── core-agent/        # pi 封装：工具注册、权限门、会话管理
