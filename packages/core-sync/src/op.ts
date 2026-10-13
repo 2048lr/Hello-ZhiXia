@@ -101,3 +101,46 @@ export function createMemoryOpLog(): OpLog {
     },
   };
 }
+
+/**
+ * 把一批远端操作合并进本地日志，返回**新增**条数。
+ *
+ * 这是同步的核心契约，两个性质不可妥协：
+ *
+ * 1. **幂等** —— 同一条操作重复投递不产生任何副作用。
+ *    同步必然重复投递：重连、重试、anti-entropy 都会重复发。
+ * 2. **与到达顺序无关** —— 网络会乱序，重连会重放旧数据。
+ *    合并结果只取决于「最终收到了哪些操作」，不取决于收到的顺序。
+ */
+export function mergeOps(target: OpLog, incoming: readonly Op[]): number {
+  let added = 0;
+  for (const op of incoming) {
+    if (target.has(op.opId)) continue;
+    target.append(op);
+    added += 1;
+  }
+  return added;
+}
+
+/** 日志中已知的最大 HLC。空日志返回 `undefined`。 */
+export function maxHlc(log: OpLog): HlcTimestamp | undefined {
+  const all = log.all();
+  return all.length === 0 ? undefined : all[all.length - 1]!.hlc;
+}
+
+/** 本地已知的全部 opId，按全序排列。用于与对端交换摘要。 */
+export function knownOpIds(log: OpLog): readonly Ulid[] {
+  return log.all().map((op) => op.opId);
+}
+
+/**
+ * 从一批操作中筛出对端摘要中**没有**的那些。
+ *
+ * 这是 anti-entropy 的应答侧。注意它用的是**完整摘要**（全部 opId）而不是
+ * 「最大 HLC 水位」—— 后者在丢包与乱序下会漏数据：
+ * 若某设备先收到来自 X 的 h3、错过了 h2，水位就会停在 h3，h2 永远补不回来。
+ * 完整摘要虽然带宽是 O(n)，但它**无条件正确**，适合作为正确性的基准实现。
+ */
+export function opsMissingFrom(incoming: readonly Op[], known: ReadonlySet<string>): Op[] {
+  return incoming.filter((op) => !known.has(op.opId));
+}

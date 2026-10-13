@@ -85,11 +85,24 @@ function getCrypto(): CryptoLike {
 }
 
 /**
- * 取 10 字节（80 位）随机数，按 5 位一组切成 16 个 Base32 数字。
+ * 随机字节源。
+ *
+ * 之所以把它做成可注入的：**确定性模拟器需要可复现的 id**。
+ * 模拟器与测试传入由固定种子驱动的实现（见 `sim/random.ts`），
+ * 生产代码使用下面的默认密码学随机源。
  */
-function randomDigits(): number[] {
-  const bytes = new Uint8Array(10);
+export type RandomBytes = (length: number) => Uint8Array;
+
+/** 默认随机源：来自运行时的 WebCrypto。 */
+export const defaultRandomBytes: RandomBytes = (length) => {
+  const bytes = new Uint8Array(length);
   getCrypto().getRandomValues(bytes);
+  return bytes;
+};
+
+/** 取 10 字节（80 位）随机数，按 5 位一组切成 16 个 Base32 数字。 */
+function randomDigits(random: RandomBytes): number[] {
+  const bytes = random(10);
 
   const digits: number[] = [];
   let acc = 0;
@@ -114,24 +127,31 @@ function format(time: number, digits: readonly number[]): Ulid {
 }
 
 /** 生成一个新的 ULID。 */
-export function ulid(seedTime: number = Date.now()): Ulid {
-  return format(seedTime, randomDigits());
+export function ulid(seedTime: number = Date.now(), random: RandomBytes = defaultRandomBytes): Ulid {
+  return format(seedTime, randomDigits(random));
 }
 
-export type UlidFactory = (seedTime?: number) => Ulid;
+/**
+ * ULID 工厂。调用方必须**显式传入时间**，不允许内部读取墙钟 ——
+ * 否则确定性模拟器里会产生不可复现的结果。
+ */
+export type UlidFactory = (seedTime: number) => Ulid;
 
 /**
  * 单调递增工厂：同一毫秒内产生的 ULID 保证字典序严格递增
  * （做法是把 80 位随机部分当作整数 +1，而不是重新随机）。
  *
  * 适用于「按 id 排序必须等于按插入顺序排序」的场景。
- * 注意同一个工厂实例是有状态的，跨设备共享同一个实例会破坏这一点。
+ * 注意同一个工厂实例是有状态的；**每台设备必须各自持有一个实例**，
+ * 跨设备共享会破坏单调性保证。
  */
-export function createMonotonicUlidFactory(seedTime: number = Date.now()): UlidFactory {
+export function createMonotonicUlidFactory(
+  random: RandomBytes = defaultRandomBytes,
+): UlidFactory {
   let lastTime = -1;
   let lastDigits: number[] = [];
 
-  return (time: number = Date.now()): Ulid => {
+  return (time: number): Ulid => {
     // 时钟回拨时也不倒退，保证单调性
     const effective = Math.max(time, lastTime);
 
@@ -151,7 +171,7 @@ export function createMonotonicUlidFactory(seedTime: number = Date.now()): UlidF
       }
     } else {
       lastTime = effective;
-      lastDigits = randomDigits();
+      lastDigits = randomDigits(random);
     }
 
     return format(lastTime, lastDigits);
