@@ -72,6 +72,40 @@ describe("分区", () => {
     expect(sim.stats().droppedByPartition).toBeGreaterThan(0);
   });
 
+  it("partition([]) 等价于 heal()，不会静默全网隔离", () => {
+    // 曾经的行为：partition([]) 建出一个空 Map，被 #reachable 解释成
+    // 「所有设备都不在任何组里」，于是每一对设备都不可达 —— 网络被静默冻死，
+    // 而文档写的是「传空数组即 heal()」。调用方按文档愈合，测试却会以极难
+    // 排查的方式失败。这个用例把契约钉死。
+    const sim = createSimulator({ seed: 41, antiEntropyInterval: 40 });
+    const a = sim.addDevice("A");
+    const b = sim.addDevice("B");
+
+    a.write(a.newEntityId(), "note.create", "before");
+    expect(sim.settle({ maxMs: 2_000 }).converged).toBe(true);
+    expect(b.log.size).toBe(1);
+
+    sim.partition([]); // 按文档：等价于 heal()
+    a.write(a.newEntityId(), "note.create", "after");
+
+    expect(sim.settle({ maxMs: 3_000 }).converged).toBe(true);
+    expect(b.log.size).toBe(2);
+  });
+
+  it("未出现在任何组里的设备仍被完全隔离（空数组修复不影响这条语义）", () => {
+    const sim = createSimulator({ seed: 43, antiEntropyInterval: 40 });
+    const a = sim.addDevice("A");
+    const b = sim.addDevice("B");
+    const lonely = sim.addDevice("lonely");
+
+    sim.partition([["A", "B"]]); // lonely 不在任何组里
+    a.write(a.newEntityId(), "note.create", "from-A");
+    sim.run(300);
+
+    expect(b.log.size).toBe(1);
+    expect(lonely.log.size).toBe(0);
+  });
+
   it("愈合后把缺失的操作补齐给从未拿到它的设备", () => {
     const sim = createSimulator({ seed: 12, antiEntropyInterval: 50 });
     const a = sim.addDevice("A");

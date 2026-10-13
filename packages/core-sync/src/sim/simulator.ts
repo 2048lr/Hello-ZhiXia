@@ -191,9 +191,20 @@ export class SyncSimulator {
 
   /**
    * 建立分区：同一组内互通，组间完全不可达，未出现在任何组里的设备被完全隔离。
-   * 传空数组即 `heal()`。
+   *
+   * 传空数组等价于 {@link heal}（即「没有分区」）。
+   * 注意「隔离全部设备」**不能**用空数组表达，必须把每台设备各自列成一组，
+   * 例如 `partition([["A"], ["B"], ["C"]])`。
    */
   partition(groups: readonly (readonly string[])[]): void {
+    // 空分组必须走 heal 分支。若在这里建出一个空 Map，`#reachable` 会对每一对
+    // 设备都取不到分组（`groups.get()` 返回 undefined），从而判定为「不可达」——
+    // 结果是全网静默隔离，与「传空数组即 heal()」的契约正好相反。
+    if (groups.length === 0) {
+      this.heal();
+      return;
+    }
+
     const map = new Map<string, number>();
     groups.forEach((group, index) => {
       for (const id of group) map.set(id, index);
