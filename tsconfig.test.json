@@ -5,5 +5,10 @@
     "composite": false,
     "incremental": false
   },
-  "include": ["packages/*/src/**/*.ts", "vitest.config.ts"]
+  "include": [
+    "packages/*/src/**/*.ts",
+    "services/*/src/**/*.ts",
+    "apps/*/src/**/*.ts",
+    "vitest.config.ts"
+  ]
 }
