@@ -1,0 +1,12 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/core-sync" },
+    { "path": "./packages/core-agent" },
+    { "path": "./packages/core-mesh" },
+    { "path": "./packages/platform-adapters" },
+    { "path": "./packages/ui-shared" },
+    { "path": "./apps/desktop" },
+    { "path": "./services/rendezvous" }
+  ]
+}

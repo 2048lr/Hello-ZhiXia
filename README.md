@@ -17,9 +17,20 @@ Hello-ZhiXia（知夏生活，简称 **HZX**）是一个**跨平台、多设备�
 
 ```
 Hello-ZhiXia/
-├── README.md       # 项目说明
-├── .gitignore      # 版本控制忽略规则
-└── .gitattributes  # 换行符与文本/二进制处理规则
+├── package.json           # pnpm workspace 根
+├── pnpm-workspace.yaml
+├── tsconfig.base.json     # 三端共享的 TS 配置
+├── packages/
+│   ├── core-sync/         # 数据层契约：ULID / HLC / 操作日志 / 墓碑 / schema 版本化
+│   ├── core-agent/        # pi 封装：工具注册、权限门、会话管理
+│   ├── core-mesh/         # 协调层：设备身份、发现、传输、写权租约
+│   ├── platform-adapters/ # 平台适配接口（文件 / 通知 / 闹钟 / 钥匙串）
+│   └── ui-shared/         # 三端共享的 UI 与状态绑定
+├── apps/
+│   ├── desktop/           # Electron 桌面应用（Windows / Linux）
+│   └── android/           # Android 瘦客户端（技术选型待定）
+└── services/
+    └── rendezvous/        # 自建 rendezvous / relay
 ```
 
 ## 快速开始
@@ -40,7 +51,20 @@ cd Hello-ZhiXia
 | 移动端 | Android 瘦客户端——持有完整数据副本，不执行 agent |
 | 运行时 | Node.js ≥ 22.19 · TypeScript |
 
-> ⚠️ 项目处于**架构设计阶段**，尚无可用代码。
+### 开发
+
+```bash
+pnpm install        # 安装依赖
+pnpm typecheck      # 类型检查（含测试文件）
+pnpm test           # 运行单元测试
+pnpm build          # 构建全部包
+```
+
+> ⚠️ 项目处于**早期阶段**：`@hzx/core-sync`（数据层契约）已实现并有测试覆盖；
+> 其余包都是空骨架，只写了职责说明与受哪些决策约束。
+
+**Windows 开发者注意**：monorepo 的 `node_modules` 层级很深，请先执行
+`git config --global core.longpaths true`，否则可能撞上 260 字符路径限制。
 
 ## 贡献指南
 
